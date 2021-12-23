@@ -1,0 +1,286 @@
+---
+title: "Exam 1"
+author: "Isaac St.Clair"
+date: "10/27/2021"
+output:
+  pdf_document:
+    toc: yes
+abstract: \noindent {Approximately 38 million people currently live with Human Immunodeficiency Virus (HIV) worldwide. The World Health Organization has recommended that countries follow certain standards relating to treatment and care of individuals suffering from this virus. One of these recommendations involves developing a policy regarding HIV self-testing practices--where countries make it possible for its citizens to self-test for HIV safely. Much academic research has been done regarding the effectiveness of self-testing in prolonging the life of those who contract HIV, but little research has been done regarding the effect of the World Health Organization encouraging the developement of such a policy worldwide. Using data from the World Health Organization, both parametric and non-parametric statistical methods are used to determine whether there is a statistical difference of HIV-related death rates between countries with a HIV self-testing policy and those without. The analysis suggests that there is a difference between these groups--countries with a self-testing policy have statistically higher death rates. Suggestions for why this might be the case are discussed, as well as suggestions for practicioners in government and the public health industry.}
+bibliography: WHOBibliography.bib
+biblio-style: apalike
+link-citations: yes
+nocite: '@*'
+---
+
+\newpage
+
+```{r setup, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r readindata, echo=FALSE, include=FALSE}
+
+set.seed(142)
+library(tidyverse)
+library(pander)
+library(flextable)
+
+HIV <- read.csv("STAT435Exam1Data.csv", header=TRUE)
+names(HIV) <- c('Country', 'DeathRate', 'WHOGuidelines', 'SelfTestingPolicy')
+
+HIV$WHOGuidelines <- as.factor(HIV$WHOGuidelines)
+HIV$SelfTestingPolicy <- as.factor(HIV$SelfTestingPolicy)
+
+#### data cleaning
+
+HIV_tidy <- HIV %>% drop_na %>% filter(DeathRate > 0)
+
+SelfTest_Yes <- HIV_tidy %>% filter(SelfTestingPolicy == "Yes")
+SelfTest_No <- HIV_tidy %>% filter(SelfTestingPolicy == "No")
+
+yes <- sample(1:68, 20, replace=FALSE)
+no <- sample(1:69, 20, replace=FALSE)
+
+SelfTest_Yes <- SelfTest_Yes[yes,]
+SelfTest_No <- SelfTest_No[no,]
+
+HIV_tidy_ST <- rbind(SelfTest_Yes, SelfTest_No)
+
+
+```
+
+
+# Introduction
+Since 2002, the World Health Organization (WHO) has frequently released reports and guidelines on diagnosis and treatment of individuals with human immunodeficiency virus (HIV) (@WHO2016). These reports have included information on treatment of individuals and different public health approaches to fighting the spread of the virus (@WHO2002 @WHO2004 @WHO2006). In 2015, the World Health Organization released two reports with guidelines on the use HIV self-testing procedures, and outlined the correct treatment for all individuals living with HIV around the world, including the use of antiretroviral drugs for treating and preventing HIV infection (@WHO2016), and collected data on which countries followed these guidelines. While many studies have been done regarding the effectiveness of antiretroviral drugs on HIV, there is no research regarding the World Health Organization’s recommendation and whether the countries that followed these recommendations saw a change in infection rates or death. The World Health Organization regularly takes and reports data regarding country's current policy on HIV self-testing, and took extensive data after the release of the report. 
+
+To understand more about this problem, and to further understand different statistical procedures and how they relate to public health data, it becomes necessary to use both parametric and non-parametric procedures to test the two groups--the countries that have a self testing policy, and the countries that do not. SelfTestingPolicy is a two level variable which indicates whether or not the country has a policy on HIV self-testing. This factor has two levels--Yes: this indicates the country does have an HIV self-testing policy and No: this indicates that the country does not have an HIV self-testing policy. 
+
+An unpaired t-test (parametric procedure), and an unpaired Mann-Whitney U test (non-parametric procedure), also known as a Wilcoxon Sum-Rank test will be used to test the two groups. Based on anecdotal evidence and the importance that the World Health Organization puts on this type of policy, it is hypothesized that there is a significant difference between countries that have instated an HIV self-testing policy, and those who have not, and countries that have such a policy have lower HIV-related death rates on average. 
+
+# Literature Review
+Although much media focus is on the AIDS epidemic in Africa, HIV is prevalent around the world, particularly in the United States. For reference, more than 1 in 30 adults in Washington D.C. are HIV-infected--a prevalence higher than that reported in Ethiopia, Nigeria, or Rwanda (@ElSadr). One of the barriers to treatment for individuals living with HIV all over the world is easy access to HIV testing and care. There are many socioeconomic and health system barriers that need to be addressed along the HIV care chain: patient fear of confidentiality breach, low rates of self referral for HIV-testing, self-testing, and public hospitals as the place of HIV diagnosis (@Koirala).
+
+One of the most important breakthroughs in HIV research is antiretroviral therapy. This therapy of HIV infection has changed a fatal disease into one that is chronic. Patients who can access and adhere to this therapy should be able to achieve lifelong suppression of the illness (@Volberding). However, many people do not have access to this life changing therapy due to the problems mentioned in Koirala's paper (@Koirala). However, this therapy works best while patients are in the early stages of HIV, thus it becomes necessary to find effecient and effective ways to test for HIV. 
+
+
+Self-HIV-testing is one of the most efficient and low-risk ways that individuals can learn whether they are infected with HIV. However, the uptake of HIV testing and counselling services remains low around the world due to fear of stigmatization, discrimination, and breach of confidentiality (@Krause). The World Health Organization has promoted HIV self-testing, and the number of countries adopting HIV self-testing policies has been rising (@Unitaid).
+  
+# Methods
+
+## Data Description
+The World Health Organization data used in this study indicates whether the country has an HIV self-testing policy, and the HIV death count per 100,000 people in the year of 2018.  Using the death rate of 2018 may give an accurate picture of the type of effect the World Heath Organization's policy (which were introduced in 2015, and recommended countries instate a self-testing policy) had three years after the guidelines were given. This data has two levels: whether the country has an existing Self-Testing Policy, or not. The response variable (HIV Death Rate) is continuous. 
+
+  
+```{r datasummary, echo=FALSE, warning=FALSE}
+st_table <- HIV_tidy %>%
+     group_by(SelfTestingPolicy) %>%
+       summarize(
+         Min = round(min(DeathRate),2),
+         '1Q' = round(summary(DeathRate)[2],2),
+         Mean = round(mean(DeathRate),2),
+         '3Q' = round(summary(DeathRate)[5],2),
+         Max = round(max(DeathRate),2),
+         'SD' = round(sd(DeathRate),2))
+st <- flextable(st_table)
+st <- add_header_lines(st, values = "Table 1: Countries with Self-Testing Policies") # add title
+st <- fontsize(st, i = 1, size = 14, part = "header") #increase text size of the title
+st <- set_table_properties(st, layout = "fixed") # autofit the width of the table and columns
+st
+```
+
+There is quite a difference between the spread of the data. The maximum value of the 'Yes' group is more than five times the maximum value of the 'No' group. This is illustrated by boxplots of the data, which are shown below.
+
+
+```{r boxplots, echo=FALSE, message=FALSE}
+   ### boxplots for SelfTestingPolicy
+boxplot(HIV_tidy_ST$DeathRate ~ HIV_tidy_ST$SelfTestingPolicy, 
+        xlab="Self-testing Policy", ylab="Death Rate", 
+        main='Figure 1: Boxplots of Death Rates by Self-Testing Policy')
+
+par(mfrow=c(1,2), mar=c(4,4,4,4))
+hist(SelfTest_Yes$DeathRate, xlab='Death Rate', main='')
+title("Self-Testing Policy", line = 0.5, cex.main=.85, font.main=1)
+hist(SelfTest_No$DeathRate, main='', xlab='Death Rate')
+title("No Self-testing policy", line=0.5, cex.main=.85, font.main=1)
+mtext("Figure 2: Histograms of Death Rate", side = 3, line = -2, outer = TRUE, font=2, cex=1.18)
+
+
+```
+The boxplots and histograms show that countries with a self-testing policy have a much larger spread of data than those that do not. This could be due to many reasons, including the fact that many countries that have high HIV/AIDS related deaths try to introduce policies that may curb the death rate. It is worth noting that the median of the "Yes" category is higher than the median of the no category, thus the analysis could result in an outcome that contradicts the initial scientific hypothesis that countries with a self-testing policy have higher HIV death rates. Both the boxplots and histograms show that the data doesn't seem to be normally distributed, so parametric analysis should be done with caution. 
+
+The data is analyzed using an alpha of 0.05. 
+  
+  
+## Parametric Method
+The hypotheses for the t-test of the different HIV self-testing policy groups are as follows:
+
+$H_{o}: \mu_{yes} = \mu_{no}$
+$H_{a}:\mu_{yes} \neq \mu_{no}$
+
+Where yes represents the countries that have a self-testing policy, and no represents the countries that do not.
+
+```{r 1wayanova, echo=FALSE, include=FALSE}
+
+t <- t.test(SelfTest_Yes$DeathRate,SelfTest_No$DeathRate)
+mean(SelfTest_Yes$DeathRate)
+mean(SelfTest_No$DeathRate)
+
+```
+
+The t-test results in a significant p-value, of `r round(t$p.value, 3)`. Realizing that there are only 20 observations per level for the t test, and the boxplots don't look very normal, it may be pertinent to apply a non-parametric method to this data analysis. Non-parametric procedures will lend more power to the analysis, because, as noted in the exploratory analysis, the data doesn't seem to be normally distributed--this could give the analysis up to five percent more power. This is especially pertinent because we have such a small amount of data, and cannot apply the central limit theorem here.  
+  
+## Non Parametric Method
+The hypotheses for the Mann-Whitney U test is as follows:
+
+$H_{o}:$ For a randomly selected X value from the Self-Testing:Yes countries and a randomly selected Y value from the Self-Testing:No countries, the probability of X > Y is equal to the probability of Y > X. 
+$H_{a}:$ The probability of X > Y is not equal to the probability of Y > X. 
+This analysis proceeds with the Mann-Whitney U test, which uses ranks to determine how different the medians of the two groups are. This test yields a U statistic, which can be used to obtain a p-value to compare to the alpha value of $0.05$.
+  
+```{r nonparametricmann, include=FALSE, echo=FALSE}
+
+HIV_ST_No <- HIV_tidy_ST %>% filter(SelfTestingPolicy == 'No')
+HIV_ST_Yes <- HIV_tidy_ST %>% filter(SelfTestingPolicy == 'Yes')
+
+### Mann-Whitney U test for SelfTestingPolicy
+  # Mann Whitney U test
+mwtest <- wilcox.test(HIV_ST_Yes$DeathRate, HIV_ST_No$DeathRate)
+
+mwtest
+
+
+```
+The Mann-Whitney U test on the SelfTestingPolicy variable returns the test statistic U = `r round(mwtest$statistic, 2)` which gives us the p-value of `r round(mwtest$p.value, 3)`, which is indeed significant, and reports that there is a difference between the median death rate for countries with an HIV self-testing policy, and countries without. However, the medians for the two groups show that the countries with an HIV Self-testing policy have a higher median of deaths than those that do not. This is contrary to the scientific hypothesis established at the beginning of this paper. 
+
+The Mann-Whitney U test in this case is especially important because it is not influenced by widely variable data. Although the two groups have drastically different spreads, the Mann-Whitney U test can test the statistical hypothesis effectively, because it uses medians, and ranks. 
+
+
+# Permutation Test 
+Because there are so few observations in the dataset, permutation test methods are apt to re-test the null-hypothesis for the Self-Testing Policy variable. Because there are forty observations for the two groups, it is unrealistic to take all the possible permutations, so an approximate permutation test is used on both variables, using a random sample of 10,000 permutations. Random assignment of the data to the different groups allows for a data distribution under the null hypothesis, that the two data sets do not come from a different population. This allows for the calculation of a p-value.
+
+The hypothesis for this test is as follows: 
+
+$H_{o}: Median_{yes} = Median_{no}$ \newline
+$H_{a}:Median_{yes} \neq Median_{no}$
+
+This is the same as testing whether the data comes from a single population, or separate populations. 
+
+
+
+```{r permutationtests, include=FALSE, echo=FALSE}
+#Permutation Test on Self-Testing Policy
+test.stat_ST <- abs(median(SelfTest_Yes$DeathRate) - median(SelfTest_No$DeathRate))
+n <- nrow(HIV_tidy_ST)
+p <- 100000
+PermSamples <- matrix(0, nrow=n, ncol=p)
+#take a random sample from 1 to choose(40,20) and select those columns from combn(40,20)
+randomvect <- sample(1:choose(40,20), size=10000, replace=FALSE)
+for(i in 1:p){
+  PermSamples[,i] <- sample(HIV_tidy_ST$DeathRate, size=n, replace=FALSE)
+}
+PermSamples[,1:5]
+Perm.test.stat <- vector("double",p)
+for(i in 1:p){
+  Perm.test.stat[i] <- abs(
+    median(PermSamples[1:20,i]) - median(PermSamples[21:40,i])
+  )
+}
+Perm.test.stat[1:15]
+hist(Perm.test.stat)
+abline(v=test.stat_ST, col="cornflowerblue")
+pval_ST <- sum(test.stat_ST < Perm.test.stat)/p
+print(pval_ST)
+
+```
+
+```{r hist2, echo=FALSE, include=TRUE}
+hist(Perm.test.stat, xlab='Permutation Test Statistics', 
+     main='Figure 3: Distribution of Permutation Test Statistics and P-Value')
+abline(v=test.stat_ST, col="cornflowerblue")
+```
+
+The results are similar to both the t-test, and the Mann-Whitney test above, and result in a p-value of `r round(pval_ST, 3)`. This mirrors the results from above. 
+
+# Randomization Test
+It may also be useful to use bootstrap methods to test the null hypothesis. Using 10,000 random samples (using replacement), a distribution is generated in which the alternative hypothesis can be tested. See the histogram below:
+
+The null and alternative hypotheses for these tests are the same as the hypotheses for the permutation test. They are as follows: \newline
+
+$H_{o}: Median_{yes} = Median_{no}$ \newline
+$H_{a}:Median_{yes} \neq Median_{no}$
+
+
+```{r bootstraptests, include=FALSE, echo=FALSE}
+#Bootstram Method on Self-Testing policy (median)
+
+#Here we see our test statistic, the difference in medians for the countries with a self testing policy,
+# and those without. 
+test.stat_ST_boot <- abs(median(SelfTest_Yes$DeathRate) - median(SelfTest_No$DeathRate))
+n_boot <- nrow(HIV_tidy_ST)
+p_boot <- 100000
+BootstrapSamples <- matrix(0, nrow=n, ncol=p)
+for(i in 1:p){
+  BootstrapSamples[,i] <- sample(HIV_tidy_ST$DeathRate, size=n, replace=TRUE)
+}
+BootstrapSamples[,1:5]
+Boot.test.stat <- vector("double",p)
+for(i in 1:p){
+  Boot.test.stat[i] <- abs(
+    median(BootstrapSamples[1:20,i]) - median(BootstrapSamples[21:40,i])
+  )
+}
+Boot.test.stat[1:15]
+hist(Boot.test.stat)
+abline(v=test.stat_ST, col="cornflowerblue")
+pval_ST_boot <- sum(test.stat_ST_boot < Boot.test.stat)/p_boot
+print(pval_ST_boot)
+```
+
+
+```{r hist1, echo=FALSE, include=TRUE}
+hist(Boot.test.stat, xlab='Bootrapping Test Statistics', 
+     main='Figure 4: Distribution of Bootstrap Test Statistics and P-Value')
+abline(v=test.stat_ST, col="cornflowerblue")
+```
+
+Although it is not as small as the p-value calculated using the permutation test, the p-value calculated, `r round(pval_ST_boot, 3)`, is still statistically significant compared to the alpha value of 0.05. 
+
+# Results
+Similar results are found using the parametric procedure, the non-parametric procedures, the permutation test, and the bootstrapping method: the HIV Self-Testing variable was statistically significant using the Mann-Whitney U test, as well as using the t-test, and produced statistically significant results when testing the medians of the two groups using a permutation test and a bootstrapping method. Non-parametric procedures give more power when analyzing data that come from a normal distribution. The t-test could have had better power if the data were assumed to come from a t-distribution, but in looking at the boxplots and histograms, it was decided that neither groups come from a normal (or approaching normal) distribution. Thus, the non-parametric procedures lend more power to the analysis. This could be the reason that we get a smaller p-value as a result of this test.  
+
+Both the permutation test and the bootstrap method derives more accuracy from smaller samples of data. The bootstrap methods samples with replacement from a small sample of data, while the approximate permutation test does not use replacement, but rather takes many different permutations to compare against the original test-statistic. Because the results were already statistically significant, these methods confirmed the outcome of the analysis. Both the permutation test and bootstrapping method used medians, rather than means, for robustness due to the fact that the data came from a non-normal distribution. 
+
+## Conclusions
+It was surprising that countries without a self-testing policy had a lower HIV death rate. This result was contrary to the original scientific hypothesis. 
+
+The results do not differ between the parametric analysis and the non-parametric analysis. It is worth noting, however, that the parametric tests had less power than the non-parametric tests due to the spread of the data, and the sample size, because the central limit theorem did not apply in the parametric case. Thus, it was worth using the non-parametric procedure in this case. If a larger sample of data was used, there could be more power in the parametric procedure by the Central Limit Theorem. The non-parametric procedures is robust in analysis of non-normal data, which was the case with this sample of data. 
+
+Although it contridicts the intuitive hypothesis, Countries with self testing policies have statistically significant higher death rates. Based on background research, it seems unlikely that HIV self-testing policies cause more HIV-related deaths. Perhaps the World Health Organization has communicated the benefits of this type of policy well enough that countries that have failed to curb their HIV death rate try and establish such a policy in order to keep the death rate down. In this case, the World Health Organization's 2015 and 2016 reports have been successful in educating governments with HIV/AIDs crises in what policies to enact to improve the HIV death rates.
+  
+## Recommendations for future research
+The reader/client may be inclined to collect more data as time progresses. Although there was a statistically significant difference the non-parametric method, researchers interested in learning more about this topic may be inclined to study the variables out further--for example, the binary variable doesn't explain how the country helps its citizens know about self-testing, or how long the country has had the policy. 
+
+This analysis could have benefited from data about when the policy was instituted, as well as how they are enforced/communicated. This could allow future researchers to use a natural experiment, and determine causation. It is recommended that future researchers continue to collect more data as time moves forward, as well as finding more specific data regarding how well a country institutes the policy. This will allow future researchers to pinpoint the guidelines that are necessary to curb HIV related deaths. 
+
+\newpage
+
+# References
+
+::: {#refs}
+:::
+
+
+
+\newpage
+
+# Appendix
+
+```{r ref.label = knitr::all_labels(), echo = TRUE, eval = FALSE}
+
+```
+
+
+
+
+
+
+
